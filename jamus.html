@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="id" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard GIS Pertanian Jamus 🌾</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f1f1; }
+    ::-webkit-scrollbar-thumb { background: #10b981; border-radius: 10px; }
+    
+    .glass-card {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        pointer-events: auto;
+    }
+
+    /* Kustomisasi tombol zoom agar tidak menutupi UI lain */
+    .leaflet-control-zoom { 
+        border: none !important; 
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+        margin-bottom: 85px !important; 
+        margin-right: 24px !important;
+    }
+    .leaflet-control-zoom-in, .leaflet-control-zoom-out {
+        border-radius: 12px !important;
+        background: white !important;
+        color: #059669 !important;
+        width: 44px !important;
+        height: 44px !important;
+        line-height: 44px !important;
+        margin-bottom: 4px;
+        font-weight: bold;
+    }
+
+    .leaflet-popup-content-wrapper { border-radius: 16px; padding: 4px; }
+    #map { z-index: 1; }
+    .ui-overlay { z-index: 1000; pointer-events: none; }
+    .ui-row { pointer-events: none; }
+  </style>
+ </head>
+ <body class="h-full bg-slate-50 overflow-hidden">
+  
+  <div id="loader" class="fixed inset-0 z-[9999] flex items-center justify-center bg-white transition-opacity duration-500">
+    <div class="flex flex-col items-center">
+      <div class="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
+      <p class="mt-4 text-emerald-800 font-semibold animate-pulse">Memuat Peta Desa Jamus... 🚜</p>
+    </div>
+  </div>
+
+  <div class="relative h-full w-full">
+    <div id="map" class="absolute inset-0 w-full h-full"></div>
+
+    <div class="ui-overlay absolute inset-0 p-4 md:p-6 flex flex-col justify-between h-full">
+      
+      <div class="ui-row flex flex-col md:flex-row justify-between items-start gap-4">
+        <header class="glass-card p-5 rounded-2xl shadow-2xl max-w-md w-full border-l-8 border-emerald-500">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center text-2xl shadow-inner">🌳</div>
+            <div>
+              <h1 class="text-xl font-bold text-slate-800 leading-tight">Pertanian Unggulan Desa Jamus</h1>
+              <p class="text-slate-500 text-xs font-medium uppercase tracking-widest text-emerald-700">📍 Kec. Mranggen, Kab. Demak</p>
+            </div>
+          </div>
+        </header>
+
+        <div class="flex flex-col items-end gap-4 ui-row">
+            <div class="grid grid-cols-3 gap-3 w-full md:w-auto">
+                <div class="glass-card p-3 px-5 rounded-2xl shadow-xl text-center">
+                    <p class="text-[10px] uppercase font-bold text-slate-400">🌾 Padi</p>
+                    <p id="stat-padi" class="text-lg font-bold text-yellow-600">0 Ha</p>
+                </div>
+                <div class="glass-card p-3 px-5 rounded-2xl shadow-xl text-center">
+                    <p class="text-[10px] uppercase font-bold text-slate-400">🍌 Pisang</p>
+                    <p id="stat-pisang" class="text-lg font-bold text-green-600">0 Ha</p>
+                </div>
+                <div class="glass-card p-3 px-5 rounded-2xl shadow-xl text-center">
+                    <p class="text-[10px] uppercase font-bold text-slate-400">🌽 Jagung</p>
+                    <p id="stat-jagung" class="text-lg font-bold text-orange-500">0 Ha</p>
+                </div>
+            </div>
+            <div class="glass-card p-4 rounded-2xl shadow-xl flex flex-col items-center pointer-events-auto">
+                <span class="text-[11px] font-extrabold text-slate-700 mb-2 uppercase tracking-widest border-b-2 border-red-500">Utara</span>
+                <svg width="60" height="60" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="#e2e8f0" stroke-width="2"/>
+                    <path d="M50 10 L62 50 L50 45 L38 50 Z" fill="#ef4444"/>
+                    <path d="M50 90 L62 50 L50 55 L38 50 Z" fill="#94a3b8"/>
+                </svg>
+            </div>
+        </div>
+      </div>
+
+      <div class="ui-row flex flex-col md:flex-row justify-between items-end gap-4">
+        <aside class="glass-card w-full md:w-80 p-6 rounded-3xl shadow-2xl">
+          <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <span class="w-2 h-5 bg-emerald-500 rounded-full"></span>
+            🗺️ Legenda
+          </h3>
+          <div class="space-y-3">
+            <div class="flex items-center gap-3">
+                <div class="w-5 h-5 rounded-md bg-yellow-400 border-2 border-white shadow-sm"></div>
+                <span class="text-sm font-semibold text-slate-700">Sawah (Padi) 🌾</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="w-5 h-5 rounded-md bg-green-500 border-2 border-white shadow-sm"></div>
+                <span class="text-sm font-semibold text-slate-700">Lahan Pisang 🍌</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="w-5 h-5 rounded-md bg-orange-500 border-2 border-white shadow-sm"></div>
+                <span class="text-sm font-semibold text-slate-700">Lahan Jagung 🌽</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="w-5 h-1 bg-blue-600 rounded-full shadow-sm"></div>
+                <span class="text-sm font-semibold text-slate-700">Irigasi 💧</span>
+            </div>
+            <div class="pt-2 border-t border-slate-100 flex items-center gap-3 p-2">
+                <div class="w-5 h-5 border-2 border-yellow-500 border-dashed rounded-md bg-yellow-50"></div>
+                <span class="text-xs text-slate-500 font-medium italic">Batas Desa Jamus</span>
+            </div>
+          </div>
+          <button onclick="resetZoom()" class="mt-6 w-full py-4 bg-emerald-600 text-white rounded-2xl text-base font-bold hover:bg-emerald-700 shadow-lg active:scale-95 flex items-center justify-center gap-2 transition-all">
+            🔄 Reset Pandangan
+          </button>
+        </aside>
+
+        <div class="glass-card px-4 py-2 rounded-full shadow-lg text-[10px] text-slate-500 font-bold uppercase tracking-widest flex items-center gap-2 mb-2">
+          <span class="flex h-2 w-2 rounded-full bg-emerald-500 animate-ping"></span>
+          🎓 KKN-T UNDIP Tim 23 2026
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let map, geojsonLayer, batasLayer;
+
+    function initMap() {
+      map = L.map('map', { zoomControl: false, attributionControl: false }).setView([-7.00, 110.50], 15);
+      
+      // Menggunakan Tile Layer Google Satellite
+      L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { maxZoom: 20 }).addTo(map);
+      
+      // Zoom dipindah ke kanan bawah
+      L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+      // 1. Batas Desa
+      fetch('batasdesa.geojson').then(res => res.json()).then(data => {
+        batasLayer = L.geoJSON(data, {
+          style: { color: '#ffff00', weight: 4, dashArray: '8, 8', fillOpacity: 0, interactive: false }
+        }).addTo(map);
+        map.fitBounds(batasLayer.getBounds(), { padding: [50, 50] });
+      });
+
+      // 2. Komoditas Pertanian
+      fetch('komoditas.geojson').then(res => res.json()).then(data => {
+        calculateStats(data);
+        geojsonLayer = L.geoJSON(data, {
+          style: (f) => ({
+            fillColor: f.properties.Lahan === 'Padi' ? '#facc15' : f.properties.Lahan === 'Pisang' ? '#22c55e' : '#f97316',
+            weight: 1.5, color: 'white', fillOpacity: 0.7
+          }),
+          onEachFeature: onEachFeature
+        }).addTo(map);
+        document.getElementById('loader').classList.add('opacity-0');
+        setTimeout(() => document.getElementById('loader').remove(), 500);
+      });
+
+      // 3. Jaringan Irigasi
+      fetch('irigasi.geojson').then(res => res.json()).then(data => {
+        L.geoJSON(data, {
+          style: { color: '#2563eb', weight: 3, opacity: 0.8 },
+          onEachFeature: (f, l) => { 
+            if (f.properties && f.properties.Nm_Inf) {
+                l.bindPopup(`<div class="text-sm font-bold text-slate-800">💧 ${f.properties.Nm_Inf}</div>`);
+            }
+          }
+        }).addTo(map);
+      });
+    }
+
+    function onEachFeature(feature, layer) {
+      layer.on({
+        mouseover: (e) => { e.target.setStyle({ weight: 4, color: '#fff', fillOpacity: 0.9 }); e.target.bringToFront(); },
+        mouseout: (e) => { geojsonLayer.resetStyle(e.target); },
+        click: (e) => { map.fitBounds(e.target.getBounds()); }
+      });
+
+      // Popup Detail Lahan dengan Luas
+      layer.bindPopup(`
+        <div class="text-slate-800">
+            <p class="text-[10px] font-bold uppercase text-slate-400 mb-1">🔍 Detail Lahan</p>
+            <h3 class="text-lg font-bold flex items-center gap-2">
+                ${feature.properties.Lahan === 'Padi' ? '🌾' : feature.properties.Lahan === 'Pisang' ? '🍌' : '🌽'}
+                ${feature.properties.Lahan}
+            </h3>
+            <div class="mt-3 grid grid-cols-1 gap-2 border-t border-slate-100 pt-2">
+                <div class="flex justify-between items-center bg-slate-50 p-2 rounded-lg">
+                    <span class="text-xs font-semibold text-slate-500">Estimasi Luas</span>
+                    <span class="text-sm font-bold text-emerald-600">📏 ${feature.properties.Luas_Ha} Ha</span>
+                </div>
+            </div>
+        </div>
+      `);
+    }
+
+    function calculateStats(data) {
+      let stats = { Padi: 0, Pisang: 0, Jagung: 0 };
+      data.features.forEach(f => {
+        if (stats[f.properties.Lahan] !== undefined) {
+            stats[f.properties.Lahan] += parseFloat(f.properties.Luas_Ha) || 0;
+        }
+      });
+      document.getElementById('stat-padi').innerHTML = `${stats.Padi.toFixed(2)} Ha`;
+      document.getElementById('stat-pisang').innerHTML = `${stats.Pisang.toFixed(2)} Ha`;
+      document.getElementById('stat-jagung').innerHTML = `${stats.Jagung.toFixed(2)} Ha`;
+    }
+
+    function resetZoom() { if(batasLayer) map.fitBounds(batasLayer.getBounds(), { padding: [50, 50] }); }
+    document.addEventListener('DOMContentLoaded', initMap);
+  </script>
+ </body>
+</html>
