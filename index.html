@@ -7,27 +7,20 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; }
     #map { z-index: 1; position: absolute; inset: 0; }
-    
-    /* Overlay UI agar berada di depan peta */
     .ui-overlay { z-index: 1000; pointer-events: none; position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 1.5rem; }
     .pointer-auto { pointer-events: auto; }
-
-    /* Glassmorphism Effect */
-    .glass-effect { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15); }
-
-    /* Custom Popup Style (Sesuai image_dc7cb0.png) */
-    .leaflet-popup-content-wrapper { border-radius: 20px; padding: 10px; background: rgba(255, 255, 255, 0.95); }
+    .glass-effect { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15); }
+    
+    /* Custom Popup */
+    .leaflet-popup-content-wrapper { border-radius: 20px; padding: 0; overflow: hidden; }
+    .leaflet-popup-content { margin: 0; width: 200px !important; }
     .leaflet-popup-tip { background: rgba(255, 255, 255, 0.95); }
-    .custom-popup h3 { font-size: 1.1rem; font-weight: 800; color: #1e293b; margin-bottom: 2px; }
-    .custom-popup .divider { height: 1px; background: #e2e8f0; margin: 8px 0; }
-    .custom-popup .label { font-size: 0.7rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
-    .custom-popup .value { font-size: 1rem; font-weight: 800; color: #059669; }
-
-    /* Zoom Controls */
+    
+    /* Kontrol Zoom */
     .leaflet-control-zoom { border: none !important; margin-bottom: 110px !important; margin-right: 20px !important; }
     .leaflet-control-zoom-in, .leaflet-control-zoom-out { border-radius: 12px !important; background: white !important; color: #059669 !important; border: 1px solid #e2e8f0 !important; }
   </style>
@@ -35,7 +28,7 @@
  <body class="h-full bg-slate-900">
   
   <div id="loader" class="fixed inset-0 z-[9999] flex items-center justify-center bg-white transition-opacity duration-700">
-    <div class="flex flex-col items-center">
+    <div class="flex flex-col items-center text-center">
       <div class="w-16 h-16 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin"></div>
       <p class="mt-4 text-emerald-800 font-bold tracking-tight animate-pulse">Menyiapkan Visual Spasial... 🛰️</p>
     </div>
@@ -46,14 +39,14 @@
   <div class="ui-overlay">
     
     <div class="flex flex-col md:flex-row justify-between items-start gap-4">
-      <header class="glass-effect p-5 rounded-3xl max-w-sm w-full border-l-[8px] border-emerald-500 pointer-auto transition-transform hover:scale-[1.02]">
-        <div class="flex items-center gap-4">
-          <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-2xl shadow-inner">🌾</div>
-          <div>
-            <h1 class="text-xl font-extrabold text-slate-800 leading-none">Pertanian Unggulan Desa Jamus</h1>
-            <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mt-2">Kec. Mranggen, Kab. Demak</p>
+      <header class="glass-effect p-5 rounded-[2rem] shadow-2xl max-w-sm w-full border-l-[10px] border-emerald-500 pointer-auto transition-transform hover:scale-[1.02]">
+          <div class="flex items-center gap-5">
+            <img src="demak.png" alt="Logo Kabupaten Demak" class="w-16 h-16 object-contain drop-shadow-md">
+            <div>
+              <h1 class="text-2xl font-extrabold text-slate-800 leading-none">Pertanian Unggulan Desa Jamus</h1>
+              <p class="text-[11px] font-bold text-emerald-600 uppercase tracking-[0.2em] mt-2">Kec.Mranggen, Kab. Demak</p>
+            </div>
           </div>
-        </div>
       </header>
 
       <div class="flex items-center gap-3 pointer-auto">
@@ -91,8 +84,7 @@
     <div class="flex flex-col md:flex-row justify-between items-end gap-4">
       <aside class="glass-effect w-full md:w-80 p-7 rounded-[2.5rem] pointer-auto">
         <h3 class="font-extrabold text-slate-800 mb-5 flex items-center gap-3">
-          <span class="w-1.5 h-6 bg-emerald-500 rounded-full"></span>
-          Legenda Peta
+          <span class="w-1.5 h-6 bg-emerald-500 rounded-full"></span> Legenda Peta
         </h3>
         <div class="space-y-4">
           <div class="flex items-center gap-4">
@@ -133,12 +125,9 @@
 
     function initMap() {
       map = L.map('map', { zoomControl: false, attributionControl: false }).setView([-7.001, 110.498], 15);
-      
-      // Menggunakan Google Satellite
       L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { maxZoom: 20 }).addTo(map);
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-      // 1. Batas Desa (Kuning Putus-putus)
       fetch('batasdesa.geojson').then(res => res.json()).then(data => {
         batasLayer = L.geoJSON(data, {
           style: { color: '#ffff00', weight: 4, dashArray: '10, 10', fillOpacity: 0, interactive: false }
@@ -146,27 +135,20 @@
         map.fitBounds(batasLayer.getBounds(), { padding: [50, 50] });
       });
 
-      // 2. Jaringan Jalan (Solid Putih)
       fetch('jalan.geojson').then(res => res.json()).then(data => {
         L.geoJSON(data, {
           style: { color: '#ffffff', weight: 2.5, opacity: 0.9 },
-          onEachFeature: (f, l) => {
-            if (f.properties.statjl) l.bindPopup(`<div class="text-[10px] font-bold text-slate-700 uppercase">🛣️ ${f.properties.statjl}</div>`);
-          }
+          onEachFeature: (f, l) => { if (f.properties.statjl) l.bindPopup(`<div class="text-[10px] font-bold text-slate-700 uppercase">🛣️ ${f.properties.statjl}</div>`); }
         }).addTo(map);
       });
 
-      // 3. Jaringan Irigasi (DI Penggaron)
       fetch('irigasi.geojson').then(res => res.json()).then(data => {
         L.geoJSON(data, {
           style: { color: '#2563eb', weight: 4, opacity: 1 },
-          onEachFeature: (f, l) => { 
-            if (f.properties.Nm_Inf) l.bindPopup(`<div class="text-[11px] font-bold text-blue-800">💧 ${f.properties.Nm_Inf}</div>`);
-          }
+          onEachFeature: (f, l) => { if (f.properties.Nm_Inf) l.bindPopup(`<div class="text-[11px] font-bold text-blue-800">💧 ${f.properties.Nm_Inf}</div>`); }
         }).addTo(map);
       });
 
-      // 4. Komoditas Lahan
       fetch('komoditas.geojson').then(res => res.json()).then(data => {
         calculateStats(data);
         geojsonLayer = L.geoJSON(data, {
@@ -176,8 +158,6 @@
           }),
           onEachFeature: onEachFeature
         }).addTo(map);
-        
-        // Sembunyikan Loader
         document.getElementById('loader').classList.add('opacity-0');
         setTimeout(() => document.getElementById('loader').remove(), 700);
       });
@@ -190,14 +170,13 @@
         click: (e) => { map.fitBounds(e.target.getBounds()); }
       });
 
-      // Popup Interaktif (Sesuai image_dc7cb0.png)
       const popupContent = `
-        <div class="custom-popup">
-            <h3>${feature.properties.Lahan}</h3>
-            <div class="divider"></div>
+        <div class="custom-popup p-4">
+            <h3 class="text-lg font-extrabold text-slate-800 mb-1">${feature.properties.Lahan}</h3>
+            <div class="divider h-[1px] bg-slate-200 my-2"></div>
             <div class="flex justify-between items-center">
-                <span class="label">Luas</span>
-                <span class="value">${feature.properties.Luas_Ha} Ha</span>
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Luas Area</span>
+                <span class="text-base font-extrabold text-emerald-600">${feature.properties.Luas_Ha} Ha</span>
             </div>
         </div>
       `;
@@ -207,9 +186,7 @@
     function calculateStats(data) {
       let stats = { Padi: 0, Pisang: 0, Jagung: 0 };
       data.features.forEach(f => {
-        if (stats[f.properties.Lahan] !== undefined) {
-            stats[f.properties.Lahan] += parseFloat(f.properties.Luas_Ha) || 0;
-        }
+        if (stats[f.properties.Lahan] !== undefined) stats[f.properties.Lahan] += parseFloat(f.properties.Luas_Ha) || 0;
       });
       document.getElementById('stat-padi').innerText = `${stats.Padi.toFixed(2)} Ha`;
       document.getElementById('stat-pisang').innerText = `${stats.Pisang.toFixed(2)} Ha`;
